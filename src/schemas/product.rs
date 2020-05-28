@@ -1,7 +1,6 @@
-use mysql::{from_row, params, Error as DBError, Row};
-
 use crate::schemas::root::Context;
 use crate::schemas::user::User;
+use std::borrow::Borrow;
 
 /// Product
 #[derive(Default, Debug)]
@@ -28,17 +27,8 @@ impl Product {
     }
 
     fn user(&self, context: &Context) -> Option<User> {
-        let mut conn = context.dbpool.get().unwrap();
-        let user: Result<Option<Row>, DBError> = conn.first_exec(
-            "SELECT * FROM user WHERE id=:id",
-            params! {"id" => &self.user_id},
-        );
-        if let Err(err) = user {
-            None
-        } else {
-            let (id, name, email) = from_row(user.unwrap().unwrap());
-            Some(User { id, name, email })
-        }
+        let mut users = context.users.borrow();
+        return users.find_one(doc!{"id": &self.user_id}, None);
     }
 }
 

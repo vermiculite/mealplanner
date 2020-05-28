@@ -1,13 +1,14 @@
 use juniper::{FieldError, FieldResult, RootNode};
-use mysql::{from_row, params, Error as DBError, Row};
 
-use crate::db::Pool;
+use mongodb::Collection;
 
 use super::product::{Product, ProductInput};
 use super::user::{User, UserInput};
+use std::borrow::Borrow;
 
 pub struct Context {
-    pub dbpool: Pool,
+    pub users: Collection,
+    pub products: Collection,
 }
 
 impl juniper::Context for Context {}
@@ -18,7 +19,10 @@ pub struct QueryRoot;
 impl QueryRoot {
     #[graphql(description = "List of all users")]
     fn users(context: &Context) -> FieldResult<Vec<User>> {
-        let mut conn = context.dbpool.get().unwrap();
+        let users = context.users.borrow(this);
+        let filter = doc! {};
+        let mut cursor = users.find(filter);
+        
         let users = conn
             .prep_exec("select * from user", ())
             .map(|result| {
@@ -36,7 +40,7 @@ impl QueryRoot {
 
     #[graphql(description = "Get Single user reference by user ID")]
     fn user(context: &Context, id: String) -> FieldResult<User> {
-        let mut conn = context.dbpool.get().unwrap();
+        let user = context.users.findOne;
 
         let user: Result<Option<Row>, DBError> =
             conn.first_exec("SELECT * FROM user WHERE id=:id", params! {"id" => id});

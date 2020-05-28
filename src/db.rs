@@ -1,12 +1,9 @@
-use r2d2_mysql::mysql::{Opts, OptsBuilder};
-use r2d2_mysql::MysqlConnectionManager;
+use mongodb::{Client, options::ClientOptions, Database};
+use futures::executor::block_on;
 
-pub type Pool = r2d2::Pool<MysqlConnectionManager>;
-
-pub fn get_db_pool() -> Pool {
+pub fn get_db() -> Database {
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let opts = Opts::from_url(&db_url).unwrap();
-    let builder = OptsBuilder::from_opts(opts);
-    let manager = MysqlConnectionManager::new(builder);
-    r2d2::Pool::new(manager).expect("Failed to create DB Pool")
+    let mut client_options = block_on(ClientOptions::parse(&db_url)).expect("The options werent cool.");
+    let client = Client::with_options(client_options).expect("It will have client options");
+    client.database("mealplanner")
 }

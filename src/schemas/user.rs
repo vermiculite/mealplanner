@@ -1,7 +1,6 @@
-use mysql::{from_row, params};
-
 use crate::schemas::product::Product;
 use crate::schemas::root::Context;
+use bson::doc;
 
 /// User
 #[derive(Default, Debug)]
@@ -30,29 +29,9 @@ impl User {
         &self.email
     }
 
-    fn products(&self, context: &Context) -> Vec<Product> {
-        let mut conn = context.dbpool.get().unwrap();
-
-        conn.prep_exec(
-            "select * from product where user_id=:user_id",
-            params! {
-                "user_id" => &self.id
-            },
-        )
-        .map(|result| {
-            result
-                .map(|x| x.unwrap())
-                .map(|mut row| {
-                    let (id, user_id, name, price) = from_row(row);
-                    Product {
-                        id,
-                        user_id,
-                        name,
-                        price,
-                    }
-                })
-                .collect()
-        })
-        .unwrap()
+    async fn products(&self, context: &Context) -> Vec<Product> {
+        let cursor = context.users.find(doc!{"user_id": self.id}, None).await?;
+        let docs: Vec<Product> = cursor.map(|doc| doc.unwrap()).collect();
+        docs
     }
 }

@@ -1,19 +1,22 @@
+use crate::db::get_db;
 use std::sync::Arc;
 
 use actix_web::{web, Error, HttpResponse};
 use juniper::http::graphiql::graphiql_source;
 use juniper::http::GraphQLRequest;
 
-use crate::db::Pool;
 use crate::schemas::root::{create_schema, Context, Schema};
 
 pub async fn graphql(
-    pool: web::Data<Pool>,
     schema: web::Data<Arc<Schema>>,
     data: web::Json<GraphQLRequest>,
 ) -> Result<HttpResponse, Error> {
+    let db = get_db();
+    let users = db.collection("users");
+    let products = db.collection("products");
     let ctx = Context {
-        dbpool: pool.get_ref().to_owned(),
+        users: users,
+        products: products,
     };
     let res = web::block(move || {
         let res = data.execute(&schema, &ctx);
